@@ -1,0 +1,5915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Twisty - Mobile Puzzle Game</title>
+  <!-- CrazyGames SDK v3 -->
+  <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+  <!-- GameMonetize SDK -->
+  <script type="text/javascript">
+    window.SDK_OPTIONS = {
+      gameId: "YOUR_GAMEMONETIZE_ID",
+      onEvent: function (a) {
+        switch (a.name) {
+          case "SDK_GAME_PAUSE":
+            if (window.sound) sound.stopMusic();
+            break;
+          case "SDK_GAME_START":
+            if (window.sound && sound.musicEnabled) sound.startMusic();
+            break;
+        }
+      }
+    };
+    (function (a, b, c) {
+      var d = a.getElementsByTagName(b)[0];
+      a.getElementById(c) || (a = a.createElement(b), a.id = c, a.src = "https://api.gamemonetize.com/sdk.js", d.parentNode.insertBefore(a, d))
+    })(document, "script", "gamemonetize-sdk");
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body {
+      background: #0d081f;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #phone-container {
+      width: 100vw;
+      max-width: 440px;
+      height: 100vh;
+      max-height: 880px;
+      background: #140d2b;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 0 12px #1f1538;
+      border-radius: 36px;
+    }
+    @media (max-width: 500px) {
+      #phone-container { border-radius: 0; box-shadow: none; max-height: 100vh; }
+    }
+    .screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: none;
+      flex-direction: column;
+      padding: 24px 20px;
+      z-index: 10;
+    }
+    .screen.active { display: flex; }
+    
+    /* Animated Background */
+    #bg-canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Common UI Elements */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      margin-bottom: 12px;
+    }
+    .btn-icon {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: #241845;
+      border: 1.5px solid #4a3485;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .btn-icon:active { transform: scale(0.92); }
+    .badge-pill {
+      background: #241845;
+      border: 1.5px solid #4a3485;
+      border-radius: 20px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: bold;
+      font-size: 15px;
+    }
+    .coin-icon {
+      width: 16px; height: 16px;
+      background: #ffc107;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+      display: inline-block;
+    }
+    .btn-primary {
+      background: #00c853;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      font-weight: 900;
+      font-size: 20px;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0, 200, 83, 0.4);
+      transition: transform 0.15s;
+    }
+    .btn-primary:active { transform: scale(0.96); }
+    .btn-secondary {
+      background: #241845;
+      color: #fff;
+      border: 2px solid #00e5ff;
+      border-radius: 18px;
+      font-weight: bold;
+      font-size: 16px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      padding: 14px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.15s;
+    }
+    .btn-secondary:active { transform: scale(0.96); }
+
+    /* Home Screen */
+    .home-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 20;
+    }
+    .logo-container {
+      display: flex;
+      gap: 4px;
+      font-size: 56px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .pulse-btn {
+      animation: pulseAnim 1.6s infinite ease-in-out;
+    }
+    @keyframes pulseAnim {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Level Select Screen */
+    .levels-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      overflow-y: auto;
+      padding: 10px 4px 30px 4px;
+      z-index: 20;
+      flex: 1;
+    }
+    .level-card {
+      aspect-ratio: 1;
+      background: #241845;
+      border: 1px solid #4a3485;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .level-card:active { transform: scale(0.94); }
+    .level-card.locked {
+      background: #160e2e;
+      border-color: #22163e;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .level-card.current {
+      border: 2.5px solid #00e5ff;
+      box-shadow: 0 0 14px rgba(0, 229, 255, 0.4);
+    }
+    .stars-mini {
+      display: flex;
+      gap: 3px;
+      font-size: 11px;
+      color: #ffd700;
+      margin-top: 4px;
+    }
+
+    /* Game Screen */
+    .sub-hud {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      z-index: 20;
+    }
+    .board-wrapper {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      z-index: 20;
+    }
+    #game-canvas {
+      touch-action: none;
+      background: #1c1338;
+      border: 3px solid #4a3485;
+      border-radius: 24px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+    }
+    .bottom-bar {
+      display: flex;
+      gap: 14px;
+      margin-top: 14px;
+      z-index: 20;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 6, 24, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #241845;
+      border: 2px solid #a855f7;
+      border-radius: 28px;
+      width: 100%;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      position: relative;
+    }
+    .stars-large {
+      display: flex;
+      gap: 12px;
+      font-size: 40px;
+      color: #ffd700;
+      margin: 16px 0;
+    }
+    .confetti-canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 105;
+    }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin: 10px 0;
+      text-align: left;
+    }
+    .switch {
+      position: relative; display: inline-block; width: 50px; height: 26px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #1c1338; border: 1.5px solid #4a3485; transition: .3s; border-radius: 26px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 2.5px;
+      background-color: white; transition: .3s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #00e5ff; }
+    input:checked + .slider:before { transform: translateX(24px); }
+  </style>
+</head>
+<body>
+
+  <div id="phone-container">
+    <canvas id="bg-canvas"></canvas>
+    <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+
+    <!-- SCREEN 1: HOME -->
+    <div id="screen-home" class="screen active">
+      <div class="top-bar">
+        <div class="badge-pill">
+          <span class="coin-icon"></span>
+          <span id="home-coins">50</span>
+        </div>
+        <div class="btn-icon" id="btn-settings-home">⚙</div>
+      </div>
+
+      <div class="home-content">
+        <div class="logo-container">
+          <span style="color:#ff2a85">T</span>
+          <span style="color:#ff7a00">W</span>
+          <span style="color:#ffd600">I</span>
+          <span style="color:#00e676">S</span>
+          <span style="color:#00e5ff">T</span>
+          <span style="color:#a855f7">Y</span>
+        </div>
+        <p style="color:#b3a5d8; font-size: 16px; margin-bottom: 24px;">Twist, Curve &amp; Connect!</p>
+        
+        <div class="badge-pill" style="border-color: #00e5ff; margin-bottom: 30px;">
+          <span id="home-stage-indicator">Stage: Level 1</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; z-index: 20;">
+        <button id="btn-play" class="btn-primary pulse-btn">▶ PLAY</button>
+        <button id="btn-levels" class="btn-secondary">LEVELS (1 - 30)</button>
+        <a href="Twisty-Game.apk" download style="text-decoration:none; text-align:center; color:#00e5ff; font-size:13px; font-weight:bold; padding:6px; display:flex; align-items:center; justify-content:center; gap:6px;">
+          <span>📲</span> Download Android App (APK)
+        </a>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: LEVEL SELECT -->
+    <div id="screen-levels" class="screen">
+      <div class="top-bar">
+        <div class="btn-icon" id="btn-back-levels">←</div>
+        <h2 style="font-size: 18px; font-weight: 900; letter-spacing: 1px;">SELECT LEVEL</h2>
+        <div class="badge-pill">
+          <span class="coin-icon"></span>
+          <span id="levels-coins">50</span>
+        </div>
+      </div>
+      <div class="levels-grid" id="levels-grid-container"></div>
+    </div>
+
+    <!-- SCREEN 3: GAME SCREEN -->
+    <div id="screen-game" class="screen">
+      <div class="top-bar">
+        <div class="btn-icon" id="btn-back-game">←</div>
+        <div style="text-align: center;">
+          <h3 id="game-level-title" style="font-size: 18px; font-weight: 900;">LEVEL 1</h3>
+          <span id="game-level-subtitle" style="font-size: 12px; color: #b3a5d8;">Sweet Start</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="badge-pill" style="padding: 5px 10px;">
+            <span class="coin-icon"></span>
+            <span id="game-coins">50</span>
+          </div>
+          <div class="btn-icon" id="btn-settings-game" style="width: 36px; height: 36px; font-size: 16px;">⚙</div>
+        </div>
+      </div>
+
+      <div class="sub-hud">
+        <div class="badge-pill" style="font-size: 13px;">
+          <span style="color: #b3a5d8;">Moves:&nbsp;</span>
+          <span id="game-moves" style="color: #fff;">0</span>
+        </div>
+        <div class="badge-pill" style="font-size: 13px;">
+          <span style="color: #b3a5d8;">Pairs:&nbsp;</span>
+          <span id="game-pairs" style="color: #00e5ff;">0 / 2</span>
+        </div>
+      </div>
+
+      <div class="board-wrapper">
+        <canvas id="game-canvas"></canvas>
+      </div>
+
+      <div class="bottom-bar">
+        <button id="btn-reset" class="btn-secondary" style="flex: 1; border-color: #4a3485;">↺ RESET</button>
+        <button id="btn-hint" class="btn-primary" style="flex: 1.3; background: #a855f7; box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4); font-size: 16px;">
+          <span class="coin-icon"></span> HINT (25)
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: LEVEL COMPLETE -->
+    <div id="modal-complete" class="modal-overlay">
+      <div class="modal-card">
+        <h2 style="font-size: 26px; font-weight: 900; letter-spacing: 1px;">LEVEL COMPLETE!</h2>
+        <p id="modal-complete-subtitle" style="color: #b3a5d8; font-size: 14px;">Level 1 Cleared</p>
+        <div class="stars-large" id="modal-stars">★★★</div>
+        
+        <div class="badge-pill" style="margin-bottom: 20px; gap: 20px; padding: 10px 20px;">
+          <div><span style="color:#b3a5d8; font-size:12px;">Moves: </span><b id="modal-moves">4</b></div>
+          <div style="width: 1px; height: 20px; background: #4a3485;"></div>
+          <div><span style="color:#b3a5d8; font-size:12px;">Reward: </span><b id="modal-reward" style="color:#ffc107;">+20</b> <span class="coin-icon"></span></div>
+        </div>
+
+        <button id="btn-modal-next" class="btn-primary" style="width: 100%; margin-bottom: 12px;">NEXT LEVEL →</button>
+        <div style="display: flex; gap: 10px; width: 100%;">
+          <button id="btn-modal-replay" class="btn-secondary" style="flex: 1; border-color: #ff7a00; color: #ff7a00;">↺ Replay</button>
+          <button id="btn-modal-levels" class="btn-secondary" style="flex: 1; border-color: #00e5ff; color: #00e5ff;">☰ Levels</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: SETTINGS -->
+    <div id="modal-settings" class="modal-overlay">
+      <div class="modal-card" style="border-color: #4a3485;">
+        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 16px;">
+          <h2 style="font-size: 20px; font-weight: 900;">SETTINGS</h2>
+          <div class="btn-icon" id="btn-close-settings" style="width: 32px; height: 32px; font-size: 16px;">✕</div>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight: bold; font-size: 15px;">Sound Effects</div>
+            <div style="color: #b3a5d8; font-size: 12px;">Pops, chimes, fanfares</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="toggle-sound" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight: bold; font-size: 15px;">Ambient Music</div>
+            <div style="color: #b3a5d8; font-size: 12px;">Soothing background melody</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="toggle-music" checked><span class="slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div style="font-weight: bold; font-size: 15px;">Haptic Feedback</div>
+            <div style="color: #b3a5d8; font-size: 12px;">Touch vibration</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="toggle-vibrate" checked><span class="slider"></span></label>
+        </div>
+
+        <button id="btn-reset-progress" class="btn-secondary" style="width: 100%; margin-top: 20px; border-color: #ff5252; color: #ff5252;">
+          🗑 Reset All Progress
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- COLOR PALETTE ---
+    const COLORS = [
+      '#ff2a85', // 0: Berry Pink
+      '#ff7a00', // 1: Tangerine
+      '#ffd600', // 2: Lemon Glow
+      '#00e676', // 3: Emerald Mint
+      '#00e5ff', // 4: Sky Cyan
+      '#a855f7', // 5: Royal Purple
+      '#ff5252', // 6: Coral
+      '#aeea00'  // 7: Lime
+    ];
+
+    // --- PROCEDURAL WEB AUDIO SYNTHESIS (Mirrors Android SoundManager) ---
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.soundEnabled = true;
+        this.musicEnabled = true;
+        this.musicTimer = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, duration, type = 'sine', sweep = null) {
+        if (!this.soundEnabled) return;
+        this.init();
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          if (sweep) {
+            osc.frequency.exponentialRampToValueAtTime(sweep, this.ctx.currentTime + duration);
+          }
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e){}
+      }
+      click() { this.playTone(1200, 0.04); }
+      dotTouch() { this.playTone(440, 0.08, 'sine', 770); }
+      step() { this.playTone(850, 0.03); }
+      connect() {
+        this.playTone(523.25, 0.12);
+        setTimeout(() => this.playTone(659.25, 0.18), 100);
+      }
+      invalid() { this.playTone(140, 0.14, 'sine', 80); }
+      win() {
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 0.25), i * 140);
+        });
+      }
+      coin() {
+        this.playTone(987.77, 0.1);
+        setTimeout(() => this.playTone(1318.51, 0.2), 90);
+      }
+      startMusic() {
+        if (this.musicTimer || !this.musicEnabled) return;
+        const melody = [261.63, 329.63, 392.00, 523.25, 659.25];
+        let idx = 0;
+        this.musicTimer = setInterval(() => {
+          if (!this.musicEnabled) return;
+          this.init();
+          try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(melody[idx % melody.length], this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.9);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.9);
+          }catch(e){}
+          idx++;
+        }, 950);
+      }
+      stopMusic() {
+        clearInterval(this.musicTimer);
+        this.musicTimer = null;
+      }
+    }
+    const sound = new SoundFX();
+
+    // --- LEVEL DATA (Matches LevelRepository.kt) ---
+        const LEVELS = [
+  {
+    "id": 1,
+    "title": "Level 1 - Sweet Start",
+    "w": 4,
+    "h": 4,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          3
+        ]
+      },
+      {
+        "id": 2,
+        "c": 4,
+        "a": [
+          3,
+          0
+        ],
+        "b": [
+          3,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "2": [
+        [
+          3,
+          0
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "title": "Level 2 - First Bend",
+    "w": 4,
+    "h": 4,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 1,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          3,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 3,
+        "a": [
+          0,
+          3
+        ],
+        "b": [
+          3,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ]
+      ],
+      "2": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 3,
+    "title": "Level 3 - Triple Flow",
+    "w": 4,
+    "h": 4,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          3
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          1,
+          3
+        ]
+      },
+      {
+        "id": 3,
+        "c": 4,
+        "a": [
+          2,
+          0
+        ],
+        "b": [
+          2,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "2": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ]
+      ],
+      "3": [
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 4,
+    "title": "Level 4 - Twisty Loop",
+    "w": 4,
+    "h": 4,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          3,
+          1
+        ]
+      },
+      {
+        "id": 2,
+        "c": 2,
+        "a": [
+          0,
+          1
+        ],
+        "b": [
+          2,
+          1
+        ]
+      },
+      {
+        "id": 3,
+        "c": 3,
+        "a": [
+          0,
+          3
+        ],
+        "b": [
+          3,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "2": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "3": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 5,
+    "title": "Level 5 - Candy Wrap",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          4,
+          4
+        ]
+      },
+      {
+        "id": 2,
+        "c": 4,
+        "a": [
+          0,
+          1
+        ],
+        "b": [
+          0,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 1,
+        "a": [
+          2,
+          1
+        ],
+        "b": [
+          2,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "2": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "3": [
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 6,
+    "title": "Level 6 - Rainbow Weave",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          4
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          1,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          2,
+          0
+        ],
+        "b": [
+          2,
+          4
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          3,
+          0
+        ],
+        "b": [
+          3,
+          4
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "2": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "3": [
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "4": [
+        [
+          3,
+          0
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "id": 7,
+    "title": "Level 7 - Spiral Twist",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 4,
+        "a": [
+          4,
+          1
+        ],
+        "b": [
+          4,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 1,
+        "a": [
+          0,
+          4
+        ],
+        "b": [
+          3,
+          4
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          0,
+          1
+        ],
+        "b": [
+          0,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "3": [
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "4": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 8,
+    "title": "Level 8 - Jalebi Swirl",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          2
+        ],
+        "b": [
+          4,
+          2
+        ]
+      },
+      {
+        "id": 2,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          1
+        ]
+      },
+      {
+        "id": 3,
+        "c": 4,
+        "a": [
+          0,
+          3
+        ],
+        "b": [
+          0,
+          4
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          4,
+          2
+        ]
+      ],
+      "2": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "3": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          0,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "id": 9,
+    "title": "Level 9 - Candy Maze",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          2,
+          2
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          4,
+          0
+        ],
+        "b": [
+          4,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 3,
+        "a": [
+          0,
+          4
+        ],
+        "b": [
+          2,
+          3
+        ]
+      },
+      {
+        "id": 4,
+        "c": 4,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          3,
+          0
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "2": [
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "3": [
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "4": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ]
+      ]
+    }
+  },
+  {
+    "id": 10,
+    "title": "Level 10 - Five Twists",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          4
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          1,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          2,
+          0
+        ],
+        "b": [
+          2,
+          4
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          3,
+          0
+        ],
+        "b": [
+          3,
+          4
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          4,
+          0
+        ],
+        "b": [
+          4,
+          4
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "2": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "3": [
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "4": [
+        [
+          3,
+          0
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "5": [
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "id": 11,
+    "title": "Level 11 - The Blockade",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          1
+        ],
+        "b": [
+          3,
+          1
+        ]
+      },
+      {
+        "id": 2,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          3,
+          3
+        ]
+      },
+      {
+        "id": 3,
+        "c": 1,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          4,
+          4
+        ]
+      }
+    ],
+    "obstacles": [
+      [
+        2,
+        2
+      ]
+    ],
+    "hints": {
+      "1": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "2": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "id": 12,
+    "title": "Level 12 - Twin Rocks",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 3,
+        "a": [
+          0,
+          4
+        ],
+        "b": [
+          4,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 1,
+        "a": [
+          2,
+          1
+        ],
+        "b": [
+          2,
+          3
+        ]
+      }
+    ],
+    "obstacles": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        2
+      ]
+    ],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "3": [
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 13,
+    "title": "Level 13 - Pillar Run",
+    "w": 5,
+    "h": 5,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          1,
+          4
+        ]
+      },
+      {
+        "id": 2,
+        "c": 2,
+        "a": [
+          3,
+          0
+        ],
+        "b": [
+          3,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 4,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          4
+        ]
+      },
+      {
+        "id": 4,
+        "c": 5,
+        "a": [
+          4,
+          0
+        ],
+        "b": [
+          4,
+          4
+        ]
+      }
+    ],
+    "obstacles": [
+      [
+        2,
+        2
+      ]
+    ],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "2": [
+        [
+          3,
+          0
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "4": [
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "id": 14,
+    "title": "Level 14 - Grand Curve",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          0,
+          1
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 4,
+        "a": [
+          2,
+          2
+        ],
+        "b": [
+          3,
+          3
+        ]
+      }
+    ],
+    "obstacles": [
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        2
+      ]
+    ],
+    "hints": {
+      "1": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "2": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          3,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 15,
+    "title": "Level 15 - The Corridor",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          1
+        ],
+        "b": [
+          4,
+          1
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          4
+        ],
+        "b": [
+          4,
+          4
+        ]
+      },
+      {
+        "id": 3,
+        "c": 3,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 4,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      }
+    ],
+    "obstacles": [
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        3
+      ]
+    ],
+    "hints": {
+      "1": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          1
+        ]
+      ],
+      "2": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          4
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ]
+    }
+  },
+  {
+    "id": 16,
+    "title": "Level 16 - Master Flow",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          5
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          4,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 17,
+    "title": "Level 17 - Master Flow",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          5
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          4,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 18,
+    "title": "Level 18 - Master Flow",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          5
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          4,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 19,
+    "title": "Level 19 - Master Flow",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          5
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          4,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 20,
+    "title": "Level 20 - Master Flow",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          5
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          4,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 21,
+    "title": "Level 21 - Master Flow",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          5
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          4,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 22,
+    "title": "Level 22 - Master Flow",
+    "w": 6,
+    "h": 6,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          4,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          5
+        ],
+        "b": [
+          4,
+          5
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          5,
+          0
+        ],
+        "b": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          4,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "4": [
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          5
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 23,
+    "title": "Level 23 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 24,
+    "title": "Level 24 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 25,
+    "title": "Level 25 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 26,
+    "title": "Level 26 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 27,
+    "title": "Level 27 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 28,
+    "title": "Level 28 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 29,
+    "title": "Level 29 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "id": 30,
+    "title": "Level 30 - Master Flow",
+    "w": 7,
+    "h": 7,
+    "pairs": [
+      {
+        "id": 1,
+        "c": 0,
+        "a": [
+          1,
+          0
+        ],
+        "b": [
+          5,
+          0
+        ]
+      },
+      {
+        "id": 2,
+        "c": 1,
+        "a": [
+          1,
+          6
+        ],
+        "b": [
+          5,
+          6
+        ]
+      },
+      {
+        "id": 3,
+        "c": 2,
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          0,
+          6
+        ]
+      },
+      {
+        "id": 4,
+        "c": 3,
+        "a": [
+          6,
+          0
+        ],
+        "b": [
+          6,
+          6
+        ]
+      },
+      {
+        "id": 5,
+        "c": 4,
+        "a": [
+          1,
+          3
+        ],
+        "b": [
+          5,
+          3
+        ]
+      }
+    ],
+    "obstacles": [],
+    "hints": {
+      "1": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "2": [
+        [
+          1,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "3": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "4": [
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          6
+        ]
+      ],
+      "5": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          5,
+          3
+        ]
+      ]
+    }
+  }
+];
+    
+// --- GAME ENGINE & STATE ---
+    let userCoins = parseInt(localStorage.getItem('twisty_coins') || '50');
+    let unlockedLevel = parseInt(localStorage.getItem('twisty_unlocked') || '1');
+    let levelStars = JSON.parse(localStorage.getItem('twisty_stars') || '{}');
+
+    let currentLevel = LEVELS[0];
+    let activePairId = null;
+    let connections = {}; // pairId -> coords array
+    let completedPairs = new Set();
+    let moveCount = 0;
+
+    // --- DOM REFERENCES ---
+    const screenHome = document.getElementById('screen-home');
+    const screenLevels = document.getElementById('screen-levels');
+    const screenGame = document.getElementById('screen-game');
+    const modalComplete = document.getElementById('modal-complete');
+    const modalSettings = document.getElementById('modal-settings');
+
+    const homeCoins = document.getElementById('home-coins');
+    const levelsCoins = document.getElementById('levels-coins');
+    const gameCoins = document.getElementById('game-coins');
+    const homeStageIndicator = document.getElementById('home-stage-indicator');
+    const levelsGrid = document.getElementById('levels-grid-container');
+
+    const gameCanvas = document.getElementById('game-canvas');
+    const gameCtx = gameCanvas.getContext('2d');
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const confettiCtx = confettiCanvas.getContext('2d');
+
+    // --- UPDATE UI STATS ---
+    function updateStats() {
+      homeCoins.textContent = userCoins;
+      levelsCoins.textContent = userCoins;
+      gameCoins.textContent = userCoins;
+      homeStageIndicator.textContent = `Stage: Level ${unlockedLevel}`;
+      localStorage.setItem('twisty_coins', userCoins);
+      localStorage.setItem('twisty_unlocked', unlockedLevel);
+      localStorage.setItem('twisty_stars', JSON.stringify(levelStars));
+    }
+
+    function switchScreen(screen) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      screen.classList.add('active');
+    }
+
+    // --- ANIMATED BACKGROUND ---
+    let bgPhase = 0;
+    function resizeCanvases() {
+      bgCanvas.width = bgCanvas.parentElement.clientWidth;
+      bgCanvas.height = bgCanvas.parentElement.clientHeight;
+      confettiCanvas.width = confettiCanvas.parentElement.clientWidth;
+      confettiCanvas.height = confettiCanvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases();
+
+    function drawBackground() {
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      const w = bgCanvas.width, h = bgCanvas.height;
+      bgPhase += 0.015;
+
+      // Floating Pink Ribbon
+      bgCtx.beginPath();
+      bgCtx.strokeStyle = 'rgba(255, 42, 133, 0.08)';
+      bgCtx.lineWidth = 48;
+      bgCtx.lineCap = 'round';
+      bgCtx.moveTo(0, h * 0.25);
+      for (let x = 0; x <= w; x += 15) {
+        bgCtx.lineTo(x, h * 0.25 + Math.sin(x * 0.008 + bgPhase) * 60);
+      }
+      bgCtx.stroke();
+
+      // Floating Cyan Ribbon
+      bgCtx.beginPath();
+      bgCtx.strokeStyle = 'rgba(0, 229, 255, 0.07)';
+      bgCtx.lineWidth = 56;
+      bgCtx.lineCap = 'round';
+      bgCtx.moveTo(0, h * 0.75);
+      for (let x = 0; x <= w; x += 15) {
+        bgCtx.lineTo(x, h * 0.75 + Math.cos(x * 0.007 + bgPhase * 0.8) * 70);
+      }
+      bgCtx.stroke();
+
+      requestAnimationFrame(drawBackground);
+    }
+    drawBackground();
+
+    // --- LEVEL SELECT SCREEN ---
+    function renderLevelSelect() {
+      levelsGrid.innerHTML = '';
+      LEVELS.forEach(lvl => {
+        const isUnlocked = lvl.id <= unlockedLevel;
+        const isCurrent = lvl.id === unlockedLevel;
+        const stars = levelStars[lvl.id] || 0;
+
+        const card = document.createElement('div');
+        card.className = `level-card ${isUnlocked ? '' : 'locked'} ${isCurrent ? 'current' : ''}`;
+        
+        if (isUnlocked) {
+          card.innerHTML = `
+            <div style="font-size: 20px; font-weight: 900; color: ${isCurrent ? '#00e5ff' : '#fff'};">${lvl.id}</div>
+            <div class="stars-mini">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+          `;
+          card.onclick = () => {
+            try { sound.click(); } catch(e) {}
+            switchScreen(screenGame);
+            loadLevel(lvl);
+          };
+        } else {
+          card.innerHTML = `
+            <div style="font-size: 16px;">🔒</div>
+            <div style="font-size: 12px; color: #665288; margin-top: 2px;">${lvl.id}</div>
+          `;
+        }
+        levelsGrid.appendChild(card);
+      });
+    }
+
+    // --- GAME ENGINE ---
+    let cellSize = 60;
+    let boardOffset = { x: 0, y: 0 };
+
+    function drawRoundRect(ctx, x, y, w, h, r) {
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      }
+    }
+
+    function loadLevel(lvl) {
+      currentLevel = lvl;
+      connections = {};
+      completedPairs.clear();
+      activePairId = null;
+      moveCount = 0;
+
+      document.getElementById('game-level-title').textContent = `LEVEL ${lvl.id}`;
+      document.getElementById('game-level-subtitle').textContent = lvl.title.split('-')[1]?.trim() || '';
+      document.getElementById('game-moves').textContent = '0';
+      document.getElementById('game-pairs').textContent = `0 / ${lvl.pairs.length}`;
+
+      const container = document.getElementById('phone-container');
+      const availW = (container ? container.clientWidth : window.innerWidth) - 48;
+      const maxDim = Math.max(260, Math.min(availW, 360));
+      gameCanvas.width = maxDim;
+      gameCanvas.height = maxDim;
+
+      cellSize = maxDim / Math.max(lvl.w, lvl.h);
+      boardOffset.x = (maxDim - lvl.w * cellSize) / 2;
+      boardOffset.y = (maxDim - lvl.h * cellSize) / 2;
+
+      drawBoard();
+    }
+
+    function drawBoard() {
+      gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+      // Grid Cells
+      for (let x = 0; x < currentLevel.w; x++) {
+        for (let y = 0; y < currentLevel.h; y++) {
+          const px = boardOffset.x + x * cellSize + 2;
+          const py = boardOffset.y + y * cellSize + 2;
+          const sz = cellSize - 4;
+
+          const isObstacle = currentLevel.obstacles.some(o => o[0] === x && o[1] === y);
+          if (isObstacle) {
+            gameCtx.fillStyle = '#3b2a6b';
+            drawRoundRect(gameCtx, px, py, sz, sz, 10);
+            gameCtx.fill();
+            // diagonal stripes
+            gameCtx.save();
+            gameCtx.clip();
+            gameCtx.strokeStyle = '#553d96';
+            gameCtx.lineWidth = 4;
+            for (let d = -sz; d < sz * 2; d += 12) {
+              gameCtx.beginPath();
+              gameCtx.moveTo(px + d, py);
+              gameCtx.lineTo(px + d + sz, py + sz);
+              gameCtx.stroke();
+            }
+            gameCtx.restore();
+          } else {
+            gameCtx.fillStyle = '#271b4e';
+            drawRoundRect(gameCtx, px, py, sz, sz, 10);
+            gameCtx.fill();
+          }
+        }
+      }
+
+      // Draw Paths (Smooth Ribbon curves)
+      Object.entries(connections).forEach(([pairId, coords]) => {
+        if (coords.length < 2) return;
+        const pair = currentLevel.pairs.find(p => p.id === parseInt(pairId));
+        const color = COLORS[pair.c % COLORS.length];
+
+        // 1. Ambient Glow
+        gameCtx.beginPath();
+        gameCtx.strokeStyle = color + '44';
+        gameCtx.lineWidth = cellSize * 0.52;
+        gameCtx.lineCap = 'round';
+        gameCtx.lineJoin = 'round';
+        coords.forEach((pt, i) => {
+          const cx = boardOffset.x + (pt[0] + 0.5) * cellSize;
+          const cy = boardOffset.y + (pt[1] + 0.5) * cellSize;
+          if (i === 0) gameCtx.moveTo(cx, cy); else gameCtx.lineTo(cx, cy);
+        });
+        gameCtx.stroke();
+
+        // 2. Main Tube
+        gameCtx.beginPath();
+        gameCtx.strokeStyle = color;
+        gameCtx.lineWidth = cellSize * 0.36;
+        coords.forEach((pt, i) => {
+          const cx = boardOffset.x + (pt[0] + 0.5) * cellSize;
+          const cy = boardOffset.y + (pt[1] + 0.5) * cellSize;
+          if (i === 0) gameCtx.moveTo(cx, cy); else gameCtx.lineTo(cx, cy);
+        });
+        gameCtx.stroke();
+
+        // 3. Central glossy highlight
+        gameCtx.beginPath();
+        gameCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        gameCtx.lineWidth = cellSize * 0.12;
+        coords.forEach((pt, i) => {
+          const cx = boardOffset.x + (pt[0] + 0.5) * cellSize;
+          const cy = boardOffset.y + (pt[1] + 0.5) * cellSize;
+          if (i === 0) gameCtx.moveTo(cx, cy); else gameCtx.lineTo(cx, cy);
+        });
+        gameCtx.stroke();
+      });
+
+      // Draw Dots
+      currentLevel.pairs.forEach(pair => {
+        const color = COLORS[pair.c % COLORS.length];
+        const isConn = completedPairs.has(pair.id);
+        const isActive = activePairId === pair.id;
+
+        [pair.a, pair.b].forEach(pt => {
+          const cx = boardOffset.x + (pt[0] + 0.5) * cellSize;
+          const cy = boardOffset.y + (pt[1] + 0.5) * cellSize;
+          const r = cellSize * 0.28;
+
+          if (isActive) {
+            gameCtx.beginPath();
+            gameCtx.arc(cx, cy, r * 1.35, 0, Math.PI * 2);
+            gameCtx.fillStyle = color + '55';
+            gameCtx.fill();
+          }
+
+          gameCtx.beginPath();
+          gameCtx.arc(cx, cy, r, 0, Math.PI * 2);
+          gameCtx.fillStyle = color;
+          gameCtx.fill();
+          gameCtx.lineWidth = 3;
+          gameCtx.strokeStyle = '#1c1338';
+          gameCtx.stroke();
+
+          if (isConn) {
+            gameCtx.beginPath();
+            gameCtx.arc(cx, cy, r * 0.38, 0, Math.PI * 2);
+            gameCtx.fillStyle = '#fff';
+            gameCtx.fill();
+          } else {
+            gameCtx.beginPath();
+            gameCtx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.32, 0, Math.PI * 2);
+            gameCtx.fillStyle = 'rgba(255,255,255,0.6)';
+            gameCtx.fill();
+          }
+        });
+      });
+    }
+
+    // --- TOUCH & POINTER HANDLING ---
+    function getCellFromCoord(clientX, clientY) {
+      const rect = gameCanvas.getBoundingClientRect();
+      const x = clientX - rect.left - boardOffset.x;
+      const y = clientY - rect.top - boardOffset.y;
+      const col = Math.floor(x / cellSize);
+      const row = Math.floor(y / cellSize);
+      if (col >= 0 && col < currentLevel.w && row >= 0 && row < currentLevel.h) {
+        return [col, row];
+      }
+      return null;
+    }
+
+    function isAdjacent(p1, p2) {
+      return (Math.abs(p1[0] - p2[0]) === 1 && p1[1] === p2[1]) ||
+             (Math.abs(p1[1] - p2[1]) === 1 && p1[0] === p2[0]);
+    }
+
+    function handlePointerDown(e) {
+      const cell = getCellFromCoord(e.clientX, e.clientY);
+      if (!cell) return;
+
+      const pair = currentLevel.pairs.find(p => 
+        (p.a[0] === cell[0] && p.a[1] === cell[1]) ||
+        (p.b[0] === cell[0] && p.b[1] === cell[1])
+      );
+
+      if (pair) {
+        activePairId = pair.id;
+        connections[pair.id] = [cell];
+        completedPairs.delete(pair.id);
+        sound.dotTouch();
+        drawBoard();
+      }
+    }
+
+    function handlePointerMove(e) {
+      if (activePairId === null) return;
+      const cell = getCellFromCoord(e.clientX, e.clientY);
+      if (!cell) return;
+
+      const path = connections[activePairId];
+      const last = path[path.length - 1];
+      if (cell[0] === last[0] && cell[1] === last[1]) return;
+
+      // Rewind check
+      const rewindIdx = path.findIndex(p => p[0] === cell[0] && p[1] === cell[1]);
+      if (rewindIdx !== -1) {
+        connections[activePairId] = path.slice(0, rewindIdx + 1);
+        sound.step();
+        drawBoard();
+        return;
+      }
+
+      if (!isAdjacent(last, cell)) return;
+
+      // Obstacle check
+      if (currentLevel.obstacles.some(o => o[0] === cell[0] && o[1] === cell[1])) {
+        sound.invalid();
+        return;
+      }
+
+      // Other dots check
+      const otherDot = currentLevel.pairs.find(p => p.id !== activePairId && (
+        (p.a[0] === cell[0] && p.a[1] === cell[1]) ||
+        (p.b[0] === cell[0] && p.b[1] === cell[1])
+      ));
+      if (otherDot) {
+        sound.invalid();
+        return;
+      }
+
+      // Crossing other paths check
+      for (const [pId, otherPath] of Object.entries(connections)) {
+        if (parseInt(pId) !== activePairId && otherPath.some(pt => pt[0] === cell[0] && pt[1] === cell[1])) {
+          sound.invalid();
+          return;
+        }
+      }
+
+      const pair = currentLevel.pairs.find(p => p.id === activePairId);
+      const target = (path[0][0] === pair.a[0] && path[0][1] === pair.a[1]) ? pair.b : pair.a;
+
+      path.push(cell);
+      sound.step();
+
+      if (cell[0] === target[0] && cell[1] === target[1]) {
+        // Connected!
+        completedPairs.add(activePairId);
+        activePairId = null;
+        moveCount++;
+        document.getElementById('game-moves').textContent = moveCount;
+        document.getElementById('game-pairs').textContent = `${completedPairs.size} / ${currentLevel.pairs.length}`;
+        sound.connect();
+
+        if (completedPairs.size === currentLevel.pairs.length) {
+          triggerLevelComplete();
+        }
+      }
+
+      drawBoard();
+    }
+
+    function handlePointerUp() {
+      if (activePairId !== null) {
+        if (!completedPairs.has(activePairId)) {
+          moveCount++;
+          document.getElementById('game-moves').textContent = moveCount;
+        }
+        activePairId = null;
+        drawBoard();
+      }
+    }
+
+    gameCanvas.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    // --- LEVEL COMPLETE & CONFETTI ---
+    function triggerLevelComplete() {
+      sound.win();
+      const stars = moveCount <= currentLevel.pairs.length ? 3 : (moveCount <= currentLevel.pairs.length + 2 ? 2 : 1);
+      const prevStars = levelStars[currentLevel.id] || 0;
+      if (stars > prevStars) levelStars[currentLevel.id] = stars;
+
+      let reward = 20;
+      if (stars === 3) reward += 10;
+      userCoins += reward;
+
+      if (currentLevel.id >= unlockedLevel) {
+        unlockedLevel = currentLevel.id + 1;
+      }
+      updateStats();
+
+      document.getElementById('modal-complete-subtitle').textContent = `${currentLevel.title} Cleared!`;
+      document.getElementById('modal-stars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      document.getElementById('modal-moves').textContent = moveCount;
+      document.getElementById('modal-reward').textContent = `+${reward}`;
+
+      modalComplete.classList.add('active');
+      launchConfetti();
+
+      // Trigger ad break every 2 level completions
+      levelsClearedCount++;
+      if (levelsClearedCount % 2 === 0) {
+        triggerAd(false);
+      }
+    }
+
+    let levelsClearedCount = 0;
+
+    // --- AD TRIGGER HELPER (CrazyGames + GameMonetize) ---
+    function triggerAd(isRewarded = false, onReward = null) {
+      // 1. Check CrazyGames SDK
+      if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad) {
+        try {
+          const adType = isRewarded ? 'rewarded' : 'midgame';
+          window.CrazyGames.SDK.ad.requestAd(adType, {
+            adStarted: () => { sound.stopMusic(); },
+            adFinished: () => {
+              if (sound.musicEnabled) sound.startMusic();
+              if (isRewarded && onReward) onReward();
+            },
+            adError: () => {
+              if (sound.musicEnabled) sound.startMusic();
+              if (isRewarded && onReward) onReward();
+            }
+          });
+          return;
+        } catch(e) {}
+      }
+
+      // 2. Check GameMonetize SDK
+      if (typeof sdk !== 'undefined' && sdk.showBanner) {
+        try {
+          sound.stopMusic();
+          sdk.showBanner();
+          if (isRewarded && onReward) setTimeout(onReward, 1200);
+          return;
+        } catch(e) {}
+      }
+
+      // Fallback if no ad loaded
+      if (isRewarded && onReward) onReward();
+    }
+
+    function applyHintDirectly() {
+      const uncompleted = currentLevel.pairs.find(p => !completedPairs.has(p.id));
+      if (!uncompleted) return;
+      const hint = currentLevel.hints[uncompleted.id];
+      if (!hint) return;
+
+      connections[uncompleted.id] = hint;
+      completedPairs.add(uncompleted.id);
+      moveCount++;
+      document.getElementById('game-moves').textContent = moveCount;
+      document.getElementById('game-pairs').textContent = `${completedPairs.size} / ${currentLevel.pairs.length}`;
+      sound.connect();
+      drawBoard();
+
+      if (completedPairs.size === currentLevel.pairs.length) {
+        triggerLevelComplete();
+      }
+    }
+
+    function launchConfetti() {
+      const particles = [];
+      for (let i = 0; i < 60; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 4 + Math.random() * 8;
+        particles.push({
+          x: confettiCanvas.width / 2,
+          y: confettiCanvas.height * 0.45,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 4,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          size: 6 + Math.random() * 8,
+          rot: Math.random() * 360,
+          rotSpeed: (Math.random() - 0.5) * 15,
+          alpha: 1
+        });
+      }
+      function animate() {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        let alive = false;
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.25; // gravity
+          p.rot += p.rotSpeed;
+          p.alpha -= 0.012;
+          if (p.alpha > 0) {
+            alive = true;
+            confettiCtx.save();
+            confettiCtx.translate(p.x, p.y);
+            confettiCtx.rotate((p.rot * Math.PI) / 180);
+            confettiCtx.fillStyle = p.color;
+            confettiCtx.globalAlpha = Math.max(0, p.alpha);
+            confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+            confettiCtx.restore();
+          }
+        });
+        if (alive) requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    document.getElementById('btn-play').onclick = () => {
+      try {
+        sound.click();
+        sound.startMusic();
+      } catch(e) {}
+      switchScreen(screenGame);
+      const target = LEVELS.find(l => l.id === unlockedLevel) || LEVELS[0];
+      loadLevel(target);
+    };
+
+    document.getElementById('btn-levels').onclick = () => {
+      sound.click();
+      renderLevelSelect();
+      switchScreen(screenLevels);
+    };
+
+    document.getElementById('btn-back-levels').onclick = () => {
+      sound.click();
+      switchScreen(screenHome);
+    };
+
+    document.getElementById('btn-back-game').onclick = () => {
+      sound.click();
+      renderLevelSelect();
+      switchScreen(screenLevels);
+    };
+
+    document.getElementById('btn-reset').onclick = () => {
+      sound.click();
+      loadLevel(currentLevel);
+    };
+
+    document.getElementById('btn-hint').onclick = () => {
+      if (userCoins >= 25) {
+        userCoins -= 25;
+        updateStats();
+        applyHintDirectly();
+      } else {
+        sound.invalid();
+        if (confirm('Need 25 coins for a hint! Would you like to watch a short ad for a FREE Hint?')) {
+          triggerAd(true, () => {
+            applyHintDirectly();
+          });
+        }
+      }
+    };
+
+    // Modal Actions
+    document.getElementById('btn-modal-next').onclick = () => {
+      sound.click();
+      modalComplete.classList.remove('active');
+      const next = LEVELS.find(l => l.id === currentLevel.id + 1);
+      if (next) loadLevel(next); else { renderLevelSelect(); switchScreen(screenLevels); }
+    };
+    document.getElementById('btn-modal-replay').onclick = () => {
+      sound.click();
+      modalComplete.classList.remove('active');
+      loadLevel(currentLevel);
+    };
+    document.getElementById('btn-modal-levels').onclick = () => {
+      sound.click();
+      modalComplete.classList.remove('active');
+      renderLevelSelect();
+      switchScreen(screenLevels);
+    };
+
+    // Settings Actions
+    document.getElementById('btn-settings-home').onclick = () => modalSettings.classList.add('active');
+    document.getElementById('btn-settings-game').onclick = () => modalSettings.classList.add('active');
+    document.getElementById('btn-close-settings').onclick = () => modalSettings.classList.remove('active');
+    document.getElementById('toggle-sound').onchange = (e) => sound.soundEnabled = e.target.checked;
+    document.getElementById('toggle-music').onchange = (e) => {
+      sound.musicEnabled = e.target.checked;
+      if (e.target.checked) sound.startMusic(); else sound.stopMusic();
+    };
+    document.getElementById('btn-reset-progress').onclick = () => {
+      if (confirm('Are you sure you want to reset all progress?')) {
+        localStorage.clear();
+        userCoins = 50;
+        unlockedLevel = 1;
+        levelStars = {};
+        updateStats();
+        modalSettings.classList.remove('active');
+        if (screenGame.classList.contains('active')) loadLevel(LEVELS[0]);
+      }
+    };
+
+    updateStats();
+  </script>
+</body>
+</html>
