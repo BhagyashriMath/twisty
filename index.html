@@ -11,6 +11,9 @@
     window.SDK_OPTIONS = {
       gameId: "bo41cfejwoc16wmnz1mjbnawig66fncv",
       onEvent: function (a) {
+        if (a.name === "SDK_READY") {
+          console.log("GameMonetize SDK Ready");
+        }
         switch (a.name) {
           case "SDK_GAME_PAUSE":
             if (window.sound) sound.stopMusic();
@@ -5728,6 +5731,14 @@
 
     // --- AD TRIGGER HELPER (CrazyGames + GameMonetize) ---
     function triggerAd(isRewarded = false, onReward = null) {
+      if (typeof sdk !== 'undefined' && typeof sdk.showBanner !== 'undefined') {
+        try {
+          sound.stopMusic();
+          sdk.showBanner();
+          if (isRewarded && onReward) setTimeout(onReward, 1200);
+          return;
+        } catch(e) {}
+      }
       // 1. Check CrazyGames SDK
       if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad) {
         try {
@@ -5824,6 +5835,11 @@
 
     document.getElementById('btn-play').onclick = () => {
       try {
+        if (typeof sdk !== 'undefined' && typeof sdk.showBanner !== 'undefined') {
+          sdk.showBanner();
+        }
+      } catch(e) {}
+      try {
         sound.click();
         sound.startMusic();
       } catch(e) {}
@@ -5871,6 +5887,11 @@
 
     // Modal Actions
     document.getElementById('btn-modal-next').onclick = () => {
+      try {
+        if (typeof sdk !== 'undefined' && typeof sdk.showBanner !== 'undefined') {
+          sdk.showBanner();
+        }
+      } catch(e) {}
       sound.click();
       modalComplete.classList.remove('active');
       const next = LEVELS.find(l => l.id === currentLevel.id + 1);
